@@ -1,0 +1,13 @@
+services:
+  mrover:
+    image: mrover_build:0.1
+    container_name: mrover_gui
+    environment:
+      - LIBGL_ALWAYS_SOFTWARE=1
+      - DISPLAY=:1
+    ports:
+      - "6080:6080"
+    entrypoint: ["/home/mrover/ros2_ws/src/mrover/entrypoint.sh"]
+    command: ["ros2", "launch", "mrover", "simulator.launch.py"]
+    tty: true
+    stdin_open: true
