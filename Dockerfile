@@ -16,8 +16,10 @@ RUN echo '%sudo ALL=(ALL) NOPASSWD:ALL' >> /etc/sudoers
 # Installing dependencies and modern Cmake for libdawn and libmanif
 RUN sudo apt-get install    libxrandr-dev libxinerama-dev libxcursor-dev mesa-common-dev \
                             libx11-xcb-dev libeigen3-dev pkg-config git cmake build-essential \
-                             python3-pip python3-setuptools xvfb fluxbox x11vnc novnc websockify -y
+                            python3-pip python3-setuptools xvfb fluxbox x11vnc novnc websockify \
+                            mesa-vulkan-drivers vulkan-tools -y
 
+RUN export XDG_RUNTIME_DIR=/tmp/runtime-root
 
 # RUN apt-get update && apt-get install -y wget gpg software-properties-common && \
 #     wget -O - https://apt.kitware.com/keys/kitware-archive-latest.asc | gpg --dearmor -o /usr/share/keyrings/kitware-archive-keyring.gpg && \
