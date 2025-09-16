@@ -1,4 +1,5 @@
-FROM ghcr.io/sloretz/ros:humble-desktop-full
+FROM arm64v8/ros:humble-ros-base-jammy
+
 # Builds mrover source code and ROS2 in a separate mrover user on the image.
 
 # DEBIAN_FRONTEND=noninteractive prevents apt from asking for user input
@@ -35,61 +36,20 @@ RUN apt-get update \
 
 WORKDIR /
 RUN git lfs install --system
-
 USER mrover
-
 # Copy directory over into temp dir for Git LFS (so the file pointers are preserved on the local system)
 # Unpacked files are later copied over into main mrover directory.
-RUN mkdir -p /home/mrover/tmp/mrover
-COPY  --chown=mrover:mrover . /home/mrover/tmp/mrover
-RUN git config --global --add safe.directory /home/mrover/tmp/mrover
-
-WORKDIR  /home/mrover/tmp/mrover
-
-# RUN git remote add origin git@github.com:QuickGiveMeMemes/mrover-ros2-macos-docker.git
-# RUN --mount=type=ssh git remote set-url origin git@github.com:QuickGiveMeMemes/mrover-ros2-macos-docker.git
-# RUN --mount=type=ssh git lfs pull --include="urdf/**"
-
-# RUN git config --global credential.helper store
-# RUN echo "https://${USERNAME}:${PAT}@github.com" > /home/mrover/.git-credentials
-# RUN git remote set-url origin https://github.com/QuickGiveMeMemes/mrover-ros2-macos-docker.git
-# RUN git lfs pull --include="urdf/**"
-
-
-WORKDIR /
-
 RUN mkdir -p /home/mrover/ros2_ws/src/mrover
+RUN git config --global --add safe.directory /home/mrover/ros2_ws/src/mrover
 
+WORKDIR  /home/mrover/ros2_ws/src/mrover
 COPY --chown=mrover:mrover . /home/mrover/ros2_ws/src/mrover
-RUN cp -r /home/mrover/tmp/mrover/urdf /home/mrover/ros2_ws/src/mrover/urdf
-RUN rm -rf /home/mrover/tmp/mrover
-# COPY --chown=mrover:mrover ./.git /home/mrover/ros2_ws/src/mrover/
 
+RUN git config --global credential.helper store
+RUN echo "https://${USERNAME}:${PAT}@github.com" > /home/mrover/.git-credentials
+RUN git remote set-url origin https://github.com/QuickGiveMeMemes/mrover-ros2-macos-docker.git
+RUN git lfs pull --include="urdf/**"
 
-WORKDIR /home/mrover/ros2_ws/src/mrover
-# RUN git lfs pull --include="urdf/**"
-
-# RUN git lfs pull -I pkg/libdawn-dev.deb pkg/libmanif-dev.deb
-
-# RUN ./ansible.sh ci.yml  --become --become-user=root
-
-# RUN colcon build --symlink-install --packages-skip-by-dep python_qt_binding
-
-
-
-# # Defines the APT packages that need to be installed
-# # rosdep is called from Ansible to install them
-# # ADD --chown=mrover:mrover ./package.xml .
-# # # Defines the Python packages that need to be installed
-# # # pip is called from Ansible to install them
-# # ADD --chown=mrover:mrover ./pyproject.toml ./README.md .
-# # ADD --chown=mrover:mrover ./mrover ./mrover
-# # # Copy over all Ansible files
-# # ADD --chown=mrover:mrover ./ansible ./ansible
-# # ADD --chown=mrover:mrover ./ansible.sh .
-# # ADD --chown=mrover:mrover ./pkg ./pkg
-# # RUN sudo dpkg --add-architecture arm64
-# # RUN git lfs pull -I pkg/libdawn-dev.deb pkg/libmanif-dev.deb
 USER root
 RUN ./ansible.sh ci.yml
 

@@ -1,7 +1,7 @@
 version: '2'
 services:
   mrover:
-    image: mrover_build:0.3nolfs
+    image: mrover_build:0.5.1
     container_name: mrover_gui
     environment:
       - LIBGL_ALWAYS_SOFTWARE=1
@@ -10,21 +10,29 @@ services:
       - DISPLAY=novnc:0.0
     depends_on:
       - novnc
+        # condition: service_healthy
     networks:
       - x11
     entrypoint: ["/home/mrover/ros2_ws/src/mrover/entrypoint.sh"]
     command: ["ros2", "launch", "mrover", "simulator.launch.py"]
     tty: true
     stdin_open: true
+    
   novnc:
-    image: theasp/novnc:latest
+    image: theasp/novnc
     environment:
-      - DISPLAY_WIDTH=3456
-      - DISPLAY_HEIGHT=2234
+      - DISPLAY=:0
+      - RESOLUTION=3456x2234
       - RUN_XTERM=no
     ports:
       - "8080:8080"
     networks:
       - x11
+    # healthcheck:
+    #   test: ["CMD-SHELL", "ss -tlnp | grep :6080 || exit 1"]
+    #   interval: 2s
+    #   timeout: 3s
+    #   retries: 20
+    #   start_period: 10s
 networks:
   x11:
