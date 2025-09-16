@@ -1,10 +1,12 @@
 version: '2'
 services:
   mrover:
-    image: mrover_build:0.2
+    image: mrover_build:0.3nolfs
     container_name: mrover_gui
     environment:
       - LIBGL_ALWAYS_SOFTWARE=1
+      - LIBGL_ALWAYS_INDIRECT=1
+      - QT_X11_NO_MITSHM=1
       - DISPLAY=novnc:0.0
     depends_on:
       - novnc
