@@ -1,4 +1,5 @@
 #include "perception.hpp"
+#include "mrover/msg/detail/starter_project_tag__struct.hpp"
 
 // ROS Headers, ros namespace
 #include <cmath>
@@ -9,10 +10,13 @@
 #include <numeric>
 #include <opencv2/aruco.hpp>
 #include <opencv2/core.hpp>
+#include <opencv2/core/cvstd_wrapper.hpp>
 #include <opencv2/core/mat.hpp>
 #include <opencv2/core/types.hpp>
 #include <opencv2/highgui.hpp>
 #include <opencv2/imgproc.hpp>
+#include <utility>
+#include <vector>
 
 auto main(int argc, char** argv) -> int {
     rclcpp::init(argc, argv);
@@ -37,7 +41,7 @@ namespace mrover {
         // Create a publisher for our tag topic
         // See: http://wiki.ros.org/ROS/Tutorials/WritingPublisherSubscriber%28c%2B%2B%29
         // TODO: uncomment me!
-        // mTagPublisher = create_publisher<msg::StarterProjectTag>("tag", 1);
+        mTagPublisher = create_publisher<msg::StarterProjectTag>("tag", 1);
 
         mTagDictionary = cv::makePtr<cv::aruco::Dictionary>(cv::aruco::getPredefinedDictionary(cv::aruco::DICT_4X4_50));
     }
@@ -51,9 +55,10 @@ namespace mrover {
         cv::Mat image;
 
         cv::cvtColor(imageBGRA, image, cv::COLOR_BGRA2BGR);
+        
+        findTagsInImage(image, mTags);
+        if(mTags.size() >= 1) publishTag(selectTag(image, mTags));
 
-        // TODO: implement me!
-        // hint: think about the order in which these functions were implemented ;)
         (void)this;
     }
 
@@ -61,25 +66,38 @@ namespace mrover {
         // hint: take a look at OpenCV's documentation for the detectMarkers function
         // hint: you have mTagDictionary, mTagCorners, and mTagIds member variables already defined! (look in perception.hpp)
         // hint: write and use the "getCenterFromTagCorners" and "getClosenessMetricFromTagCorners" functions
-
         tags.clear(); // Clear old tags in output vector
 
-        // TODO: implement me!
-        (void)image;
+        cv::aruco::detectMarkers(image, mTagDictionary, mTagCorners, mTagIds);
+        for(size_t i = 0; i < mTagCorners.size(); ++i) {
+            std::pair<float, float> center = getCenterFromTagCorners(mTagCorners[i], image.rows, image.cols);
 
+            msg::StarterProjectTag current_tag = msg::StarterProjectTag();
+            current_tag.tag_id = mTagIds[i];
+            current_tag.x_tag_center_pixel = center.first;
+            current_tag.y_tag_center_pixel = center.second;
+            current_tag.closeness_metric = getClosenessMetricFromTagCorners(image, mTagCorners[i]);
+
+            tags.push_back(current_tag);
+        }
     }
 
+    // tags.size() >= 1
     auto Perception::selectTag(cv::Mat const& image, std::vector<msg::StarterProjectTag> const& tags) -> msg::StarterProjectTag { // NOLINT(*-convert-member-functions-to-static)
-        // TODO: implement me!
-        (void)image;
-        (void)tags;
-        return msg::StarterProjectTag{};
+        float min_closeness = std::numeric_limits<float>::max();
+        size_t min_idx = 0;
+
+        for(size_t i = 0; i < tags.size(); ++i) {
+            if(tags[i].closeness_metric < min_closeness) {
+                min_closeness = tags[i].closeness_metric;
+                min_idx = i;
+            }
+        }
+        return tags[min_idx];
     }
 
     auto Perception::publishTag(msg::StarterProjectTag const& tag) -> void {
-        // TODO: implement me!
-        (void)tag;
-
+        mTagPublisher->publish(tag);
     }
 
     auto Perception::getClosenessMetricFromTagCorners(cv::Mat const& image, std::vector<cv::Point2f> const& tagCorners) -> float { // NOLINT(*-convert-member-functions-to-static)
@@ -87,16 +105,15 @@ namespace mrover {
         // hint: this is an approximation that will be used later by navigation to stop "close enough" to a tag.
         // hint: try not overthink, this metric does not have to be perfectly accurate, just correlated to distance away from a tag
 
-        // TODO: implement me!
-        (void)image;
-        (void)tagCorners;
-        return {};
+        float side_d = std::sqrt(std::pow(tagCorners[0].x - tagCorners[3].x, 2.0) + std::pow(tagCorners[0].y - tagCorners[3].y, 2.0));
+        return side_d / image.cols;
     }
 
-    auto Perception::getCenterFromTagCorners(std::vector<cv::Point2f> const& tagCorners) -> std::pair<float, float> { // NOLINT(*-convert-member-functions-to-static)
-        // TODO: implement me!
-        (void)tagCorners;
-        return {};
+    // NOTE: changed to scale from 0 to 1
+    auto Perception::getCenterFromTagCorners(std::vector<cv::Point2f> const& tagCorners, int rows, int cols) -> std::pair<float, float> { // NOLINT(*-convert-member-functions-to-static)
+        float x_c = (tagCorners[0].x + tagCorners[1].x + tagCorners[2].x + tagCorners[3].x) / (4.0 * cols);
+        float y_c = (tagCorners[0].y + tagCorners[1].y + tagCorners[2].y + tagCorners[3].y) / (4.0 * rows);
+        return {x_c, y_c};
     }
 
 } // namespace mrover

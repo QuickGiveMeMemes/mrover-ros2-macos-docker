@@ -4,6 +4,7 @@ import sys
 
 # ros and state machine imports
 import rclpy
+from rclpy.logging import LoggingSeverity
 from rclpy.executors import ExternalShutdownException
 from rclpy.node import Node
 from state_machine.state_machine import StateMachine
@@ -25,12 +26,18 @@ class Navigation(Node):
         super().__init__("navigation")
 
         self.get_logger().info("Starting...")
+        # self.get_logger().set_level(LoggingSeverity.DEBUG)
 
         self.ctx = ctx
 
         self.state_machine = StateMachine[Context](DriveState(), "NavigationStateMachine", self.ctx, self.get_logger())
 
         # TODO: add DriveState and its transitions here
+
+        self.state_machine.add_transitions(
+            DriveState(),
+            [DriveState(), TagSeekState()]
+        )
 
         # DoneState and its transitions
         self.state_machine.add_transitions(
@@ -46,6 +53,11 @@ class Navigation(Node):
 
         # TODO: add TagSeekState and its transitions here
 
+        self.state_machine.add_transitions(
+            TagSeekState(),
+            [TagSeekState(), FailState(), DoneState()]
+        )
+
         self.state_machine_server = StatePublisher(self, self.state_machine, "nav_structure", 1, "nav_state", 10)
 
         self.create_timer(1 / 60, self.state_machine.update)
@@ -54,6 +66,8 @@ class Navigation(Node):
 def main():
     try:
         # TODO: init a node called "navigation"
+
+        rclpy.init()
 
         # context and navigation objects
         context = Context()

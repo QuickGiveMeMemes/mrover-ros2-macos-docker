@@ -5,6 +5,7 @@ from typing import Optional
 
 import numpy as np
 import rclpy
+import rclpy.time
 from rclpy.publisher import Publisher
 from rclpy.subscription import Subscription
 from rclpy.node import Node
@@ -25,16 +26,16 @@ class Rover:
     ctx: Context
 
     def get_pose(self) -> Optional[SE3]:
-        # TODO: return the pose of the rover (or None if we don't have one (catch exception))
-        pass
+        try:
+            return SE3.from_tf_tree(self.ctx.tf_buffer, "map", "rover_base_link")
+        except:
+            return None
 
     def send_drive_command(self, twist: Twist):
-        # TODO: send the Twist message to the rover
-        pass
+        self.ctx.vel_cmd_publisher.publish(twist)
 
     def send_drive_stop(self):
-        # TODO: tell the rover to stop
-        pass
+        self.send_drive_command(Twist())
 
 
 @dataclass
@@ -46,11 +47,11 @@ class Environment:
 
     ctx: Context
     fid_pos: Optional[StarterProjectTag]
+    # fid_data_timestamp: Optional[rclpy.time.Time]
 
     def receive_fid_data(self, message: StarterProjectTag):
-        # TODO: handle incoming FID data messages here
-        pass
-
+        self.fid_pos = message
+        # self.fid_data_timestamp = self.ctx.node.get_clock().now()
     def get_fid_data(self) -> Optional[StarterProjectTag]:
         """
         Retrieves the last received message regarding fid pose
@@ -58,6 +59,13 @@ class Environment:
         """
         # TODO: return either None or your position message
 
+        if self.fid_pos is None:
+            return None
+        # elif (self.ctx.node.get_clock().now().seconds_nanoseconds()[0] 
+        #       - self.fid_data_timestamp.seconds_nanoseconds[0] > 1):
+        #     return None
+        else:
+            return self.fid_pos
 
 class Context:
     node: Node
